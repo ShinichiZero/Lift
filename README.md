@@ -27,7 +27,7 @@ LiftGlass Pro is a production-ready, local-first workout planner and progressive
 Any static server works.
 
 ```bash
-cd /home/runner/work/Lift/Lift
+cd path/to/liftglass-pro
 python -m http.server 4173
 ```
 

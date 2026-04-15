@@ -37,7 +37,10 @@ self.addEventListener('fetch', (event) => {
       fetch(event.request)
         .then((response) => {
           const copy = response.clone();
-          caches.open(CACHE).then((cache) => cache.put('./index.html', copy)).catch(() => undefined);
+          caches
+            .open(CACHE)
+            .then((cache) => cache.put('./index.html', copy))
+            .catch((error) => console.warn(`SW index cache put failed (${CACHE})`, error));
           return response;
         })
         .catch(() => caches.match('./index.html')),
@@ -50,7 +53,10 @@ self.addEventListener('fetch', (event) => {
       return fetch(event.request)
         .then((response) => {
           const copy = response.clone();
-          caches.open(CACHE).then((cache) => cache.put(event.request, copy)).catch(() => undefined);
+          caches
+            .open(CACHE)
+            .then((cache) => cache.put(event.request, copy))
+            .catch((error) => console.warn(`SW cache put failed for ${event.request.url} (${CACHE})`, error));
           return response;
         })
         .catch(() => caches.match('./index.html'));

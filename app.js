@@ -2,6 +2,15 @@ const DB_NAME = 'liftglass-pro-db';
 const DB_VERSION = 1;
 const STORE_NAME = 'app-state';
 const STATE_KEY = 'state-v1';
+const MAX_IMPORT_FILE_SIZE = 3_000_000;
+const EPLEY_CONSTANT = 30;
+const MAX_STREAK_WEEKS = 20;
+const RPE_TOLERANCE = 0.75;
+const MIN_WEIGHT_INCREMENT = 0.5;
+const WEIGHT_INCREASE_FACTOR = 1.025;
+const WEIGHT_DECREASE_FACTOR = 0.975;
+const HALF_STEP_MULTIPLIER = 2;
+const MS_PER_DAY = 86_400_000;
 
 const state = {
   exercises: [],
@@ -242,18 +251,18 @@ function suggestNextTarget(entry) {
   const allAtTop = sets.every((set) => Number(set.reps || 0) >= max);
   const lowRepCount = sets.filter((set) => Number(set.reps || 0) < min).length;
   const avgWeight = sets.reduce((acc, set) => acc + Number(set.weight || 0), 0) / sets.length;
-  const roundedBase = Math.max(0, Math.round(avgWeight * 2) / 2);
+  const roundedBase = Math.max(0, Math.round(avgWeight * HALF_STEP_MULTIPLIER) / HALF_STEP_MULTIPLIER);
 
   if (allAtTop && avgRpe <= targetRpe) {
-    const next = Math.round(Math.max(roundedBase + 0.5, roundedBase * 1.025) * 2) / 2;
+    const next = Math.round(Math.max(roundedBase + MIN_WEIGHT_INCREMENT, roundedBase * WEIGHT_INCREASE_FACTOR) * HALF_STEP_MULTIPLIER) / HALF_STEP_MULTIPLIER;
     return {
       title: `Increase load to ~${next.toFixed(1)} kg`,
       rationale: `All sets reached the top of ${max} reps at avg RPE ${avgRpe.toFixed(1)} (≤ target ${targetRpe}).`,
     };
   }
 
-  if (lowRepCount >= Math.ceil(sets.length / 2) || avgRpe > targetRpe + 0.75) {
-    const next = Math.max(0, Math.round(roundedBase * 0.975 * 2) / 2);
+  if (lowRepCount >= Math.ceil(sets.length / 2) || avgRpe > targetRpe + RPE_TOLERANCE) {
+    const next = Math.max(0, Math.round(roundedBase * WEIGHT_DECREASE_FACTOR * HALF_STEP_MULTIPLIER) / HALF_STEP_MULTIPLIER);
     return {
       title: next >= roundedBase ? `Hold at ${roundedBase.toFixed(1)} kg` : `Reduce to ~${next.toFixed(1)} kg`,
       rationale: `Reps dropped below ${min} on ${lowRepCount}/${sets.length} sets or avg RPE ${avgRpe.toFixed(1)} exceeded target.`,
@@ -270,7 +279,16 @@ function estimateOneRm(weight, reps) {
   const w = Number(weight || 0);
   const r = Number(reps || 0);
   if (!w || !r) return 0;
-  return w * (1 + r / 30);
+  return w * (1 + r / EPLEY_CONSTANT);
+}
+
+function getIsoWeekKey(sourceDate) {
+  const date = new Date(Date.UTC(sourceDate.getUTCFullYear(), sourceDate.getUTCMonth(), sourceDate.getUTCDate()));
+  const weekday = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + 4 - weekday);
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  const week = Math.ceil((((date - yearStart) / MS_PER_DAY) + 1) / 7);
+  return `${date.getUTCFullYear()}-W${String(week).padStart(2, '0')}`;
 }
 
 function renderSessionPanel() {
@@ -541,7 +559,7 @@ function renderAnalytics() {
       const muscle = exercise?.muscleGroup || 'Other';
       entry.sets.forEach((set) => {
         const date = new Date(set.loggedAt || session.completedAt || session.startedAt);
-        const week = `${date.getUTCFullYear()}-W${String(Math.ceil((date.getUTCDate() + 6) / 7)).padStart(2, '0')}`;
+        const week = getIsoWeekKey(date);
         const key = `${week}|${muscle}`;
         volumeByWeekAndMuscle[key] = (volumeByWeekAndMuscle[key] || 0) + Number(set.weight || 0) * Number(set.reps || 0);
       });
@@ -550,7 +568,7 @@ function renderAnalytics() {
 
   const muscles = Object.entries(volumeByWeekAndMuscle)
     .slice(-8)
-    .map(([k, vol]) => `${k.replace('|', ' · ')}: ${Math.round(vol)} kg·reps`);
+    .map(([k, vol]) => `${k.split('|').join(' · ')}: ${Math.round(vol)} kg·reps`);
 
   let streak = 0;
   const weeklyCompleted = new Set(
@@ -558,13 +576,13 @@ function renderAnalytics() {
       .filter((s) => s.completedAt)
       .map((s) => {
         const d = new Date(s.completedAt);
-        return `${d.getUTCFullYear()}-${Math.ceil((d.getUTCDate() + 6) / 7)}`;
+        return getIsoWeekKey(d);
       }),
   );
-  for (let i = 0; i < 20; i += 1) {
+  for (let i = 0; i < MAX_STREAK_WEEKS; i += 1) {
     const dt = new Date();
     dt.setUTCDate(dt.getUTCDate() - i * 7);
-    const key = `${dt.getUTCFullYear()}-${Math.ceil((dt.getUTCDate() + 6) / 7)}`;
+    const key = getIsoWeekKey(dt);
     if (weeklyCompleted.has(key)) streak += 1;
     else break;
   }
@@ -653,7 +671,7 @@ function attachEvents() {
       createdAt: new Date().toISOString(),
     };
     if (!exercise.name || !exercise.muscleGroup || !exercise.movementPattern || !exercise.equipment) {
-      toast('Please complete all exercise fields.');
+      toast('Please enter exercise name, muscle group, movement pattern, and equipment.');
       return;
     }
     state.exercises.push(exercise);
@@ -696,7 +714,7 @@ function attachEvents() {
       return;
     }
     const fd = new FormData(el.addTemplateExerciseForm);
-    const exerciseId = sanitizeText(fd.get('exerciseId') || el.templateExerciseSelect.value, 60);
+    const exerciseId = sanitizeText(el.templateExerciseSelect.value, 60);
     const exercise = state.exercises.find((ex) => ex.id === exerciseId);
     if (!exercise) {
       toast('Select a valid exercise.');
@@ -788,10 +806,10 @@ function attachEvents() {
     const [file] = el.importFile.files || [];
     if (!file) return;
     try {
-      if (file.size > 3_000_000) throw new Error('Import file too large.');
+      if (file.size > MAX_IMPORT_FILE_SIZE) throw new Error(`Import file too large. Maximum size: ${MAX_IMPORT_FILE_SIZE / 1_000_000} decimal MB.`);
       const text = await file.text();
       const parsed = JSON.parse(text);
-      if (!validateImportShape(parsed)) throw new Error('JSON schema mismatch.');
+      if (!validateImportShape(parsed)) throw new Error('Invalid backup format. Expected arrays for exercises/templates/sessions/recentExerciseIds and an object ui payload.');
 
       parsed.exercises = parsed.exercises.map((exercise) => ({
         ...exercise,
