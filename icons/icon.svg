@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="LiftGlass Pro icon">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#6dc4ff"/>
+      <stop offset="100%" stop-color="#5f72ff"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="rgba(255,255,255,0.75)"/>
+      <stop offset="100%" stop-color="rgba(255,255,255,0.15)"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="108" fill="#0b1527"/>
+  <rect x="36" y="36" width="440" height="440" rx="96" fill="url(#g)" opacity="0.85"/>
+  <rect x="66" y="66" width="380" height="380" rx="82" fill="url(#glass)" opacity="0.35"/>
+  <g fill="none" stroke="#ffffff" stroke-width="26" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M110 236h82"/>
+    <path d="M320 236h82"/>
+    <path d="M182 196h148v80H182z"/>
+    <path d="M144 174v124"/>
+    <path d="M368 174v124"/>
+  </g>
+</svg>

@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests" />
+    <meta name="theme-color" content="#0a1120" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#e7eefb" media="(prefers-color-scheme: light)" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="LiftGlass Pro" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png" />
+    <link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="styles.css" />
+    <title>LiftGlass Pro</title>
+  </head>
+  <body>
+    <a class="sr-only focusable" href="#main">Skip to content</a>
+    <header class="top-bar glass">
+      <div>
+        <p class="eyebrow">Local-first strength planner</p>
+        <h1>LiftGlass Pro</h1>
+      </div>
+      <button id="theme-toggle" class="chip" type="button" aria-label="Toggle light and dark theme">🌗</button>
+    </header>
+
+    <main id="main" class="app-shell" aria-live="polite">
+      <section id="view-plan" class="view active" aria-labelledby="plan-title">
+        <div class="glass card">
+          <h2 id="plan-title">Workout plan builder</h2>
+          <form id="exercise-form" class="stack" autocomplete="off">
+            <h3>Add exercise</h3>
+            <label>Name<input required name="name" maxlength="80" /></label>
+            <label>Muscle group<input required name="muscleGroup" maxlength="40" /></label>
+            <label>Movement pattern<input required name="movementPattern" maxlength="40" /></label>
+            <label>Equipment<input required name="equipment" maxlength="40" /></label>
+            <label class="row"><input type="checkbox" name="unilateral" />Unilateral</label>
+            <label class="row"><input type="checkbox" name="warmupNeeded" />Warm-up needed</label>
+            <button class="primary" type="submit">Save exercise</button>
+          </form>
+        </div>
+
+        <div class="glass card">
+          <h3>Exercise library</h3>
+          <label>Search<input id="exercise-search" placeholder="Search name/muscle/equipment" /></label>
+          <div id="exercise-list" class="list" role="list"></div>
+        </div>
+
+        <div class="glass card">
+          <h3>Template builder</h3>
+          <form id="template-form" class="stack" autocomplete="off">
+            <label>Template name<input required name="name" maxlength="60" /></label>
+            <label>Split
+              <select name="split" required>
+                <option>Push/Pull/Legs</option>
+                <option>Upper/Lower</option>
+                <option>Full Body</option>
+                <option>Custom</option>
+              </select>
+            </label>
+            <label>Day name<input required name="dayName" maxlength="40" placeholder="Push A" /></label>
+            <button class="primary" type="submit">Create template</button>
+          </form>
+          <label>Template
+            <select id="template-select"></select>
+          </label>
+          <label>Day
+            <select id="day-select"></select>
+          </label>
+          <form id="add-template-exercise-form" class="stack" autocomplete="off">
+            <label>Exercise
+              <select id="template-exercise-select" required></select>
+            </label>
+            <div class="grid-2">
+              <label>Sets<input name="sets" type="number" min="1" max="12" value="3" required /></label>
+              <label>Rep range<input name="repRange" value="8-12" pattern="^\d{1,2}-\d{1,2}$" required /></label>
+              <label>Rest (sec)<input name="rest" type="number" min="15" max="600" value="90" required /></label>
+              <label>Tempo<input name="tempo" maxlength="16" value="2-0-2" required /></label>
+              <label>Target RPE<input name="targetRpe" type="number" min="4" max="10" value="8" /></label>
+              <label>Target RIR<input name="targetRir" type="number" min="0" max="6" value="2" /></label>
+            </div>
+            <button class="primary" type="submit">Add to day</button>
+          </form>
+          <div class="row wrap">
+            <button id="duplicate-day" type="button" class="chip">Duplicate day</button>
+          </div>
+          <div id="template-day-exercises" class="list" role="list"></div>
+        </div>
+      </section>
+
+      <section id="view-log" class="view" aria-labelledby="log-title">
+        <div class="glass card">
+          <h2 id="log-title">Fast workout logging</h2>
+          <div class="grid-2">
+            <label>Template<select id="log-template-select"></select></label>
+            <label>Day<select id="log-day-select"></select></label>
+          </div>
+          <button id="start-session" class="primary" type="button">Start session</button>
+          <p id="session-status" class="muted">No active session</p>
+          <div id="recent-exercises" class="chips" aria-label="Recent exercises"></div>
+          <div id="session-panel" class="hidden" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <section id="view-analytics" class="view" aria-labelledby="analytics-title">
+        <div class="glass card">
+          <h2 id="analytics-title">Analytics</h2>
+          <label>Exercise<select id="analytics-exercise-select"></select></label>
+          <canvas id="history-chart" width="520" height="240" aria-label="Exercise history chart"></canvas>
+          <canvas id="onerm-chart" width="520" height="240" aria-label="Estimated one rep max chart"></canvas>
+          <div id="analytics-summary" class="stack"></div>
+          <h3>Personal records</h3>
+          <div id="pr-list" class="list"></div>
+        </div>
+      </section>
+
+      <section id="view-settings" class="view" aria-labelledby="settings-title">
+        <div class="glass card">
+          <h2 id="settings-title">Data & privacy</h2>
+          <p class="muted">All data stays on this device unless you export it manually.</p>
+          <div class="row wrap">
+            <button id="export-data" type="button" class="primary">Export JSON</button>
+            <label class="chip" for="import-file">Import JSON</label>
+            <input id="import-file" type="file" accept="application/json" class="sr-only" />
+          </div>
+          <pre id="import-status" class="muted" aria-live="polite"></pre>
+          <ul>
+            <li>No trackers</li>
+            <li>No account required</li>
+            <li>Strict CSP applied</li>
+          </ul>
+        </div>
+      </section>
+    </main>
+
+    <nav class="bottom-nav glass" aria-label="Primary">
+      <button data-view="plan" class="nav-btn active" type="button">Plan</button>
+      <button data-view="log" class="nav-btn" type="button">Log</button>
+      <button data-view="analytics" class="nav-btn" type="button">Progress</button>
+      <button data-view="settings" class="nav-btn" type="button">Settings</button>
+    </nav>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <script src="app.js" defer></script>
+  </body>
+</html>
